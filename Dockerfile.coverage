@@ -48,7 +48,9 @@ RUN \
 # ===================================
 FROM alpine:3.20.3@sha256:beefdbd8a1da6d2915566fde36db9db0b524eb737fc57cd1367effd16dc0d06d
 
-RUN apk --no-cache add ca-certificates tzdata wget
+RUN apk --no-cache add ca-certificates tzdata wget && \
+	mkdir /var/cache/authelia && \
+	chmod 0777 /var/cache/authelia
 
 WORKDIR /app
 
