@@ -15,6 +15,7 @@ import (
 
 	"github.com/authelia/authelia/v4/internal/clock"
 	"github.com/authelia/authelia/v4/internal/configuration/schema"
+	"github.com/authelia/authelia/v4/internal/expression"
 	"github.com/authelia/authelia/v4/internal/logging"
 	"github.com/authelia/authelia/v4/internal/model"
 	"github.com/authelia/authelia/v4/internal/random"
@@ -662,4 +663,8 @@ func (ctx *AutheliaCtx) GetJWTWithTimeFuncOption() (option jwt.ParserOption) {
 // GetConfiguration returns the current configuration.
 func (ctx *AutheliaCtx) GetConfiguration() (config schema.Configuration) {
 	return ctx.Configuration
+}
+
+func (ctx *AutheliaCtx) GetProviderUserAttributeResolver() expression.UserAttributeResolver {
+	return ctx.Providers.UserAttributeResolver
 }
