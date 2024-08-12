@@ -21,6 +21,14 @@ func OpenIDConnectTokenPOST(ctx *middlewares.AutheliaCtx, rw http.ResponseWriter
 
 	session := oidc.NewSession()
 
+	_ = req.ParseMultipartForm(1 << 20)
+
+	ctx.Logger.WithFields(map[string]any{
+		"post_form": req.PostForm.Encode(),
+		"form":      req.Form.Encode(),
+		"headers":   req.Header,
+	}).Debug("Token Request")
+
 	if requester, err = ctx.Providers.OpenIDConnect.NewAccessRequest(ctx, req, session); err != nil {
 		ctx.Logger.Errorf("Access Request failed with error: %s", oauthelia2.ErrorToDebugRFC6749Error(err))
 
