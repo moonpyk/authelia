@@ -561,7 +561,7 @@ func TestShouldDisableOIDCModern(t *testing.T) {
 
 	val.Clear()
 
-	validator.ValidateIdentityProviders(validator.NewValidateCtx(), &config.IdentityProviders, val)
+	validator.ValidateIdentityProviders(validator.NewValidateCtx(), config, val)
 
 	require.Len(t, val.Errors(), 2)
 	require.Len(t, val.Warnings(), 1)

@@ -3,6 +3,7 @@ package oidc
 import (
 	"context"
 	"crypto/sha512"
+	"github.com/authelia/authelia/v4/internal/logging"
 	"hash"
 	"html/template"
 	"net/url"
@@ -20,6 +21,7 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 
 	"github.com/authelia/authelia/v4/internal/configuration/schema"
+	"github.com/authelia/authelia/v4/internal/model"
 	"github.com/authelia/authelia/v4/internal/templates"
 	"github.com/authelia/authelia/v4/internal/utils"
 )
@@ -502,7 +504,7 @@ func (c *Config) GetJWTScopeField(ctx context.Context) (field jwt.JWTScopeFieldE
 
 // GetIssuerFallback returns the issuer from the ctx or returns the fallback value.
 func (c *Config) GetIssuerFallback(ctx context.Context, fallback string) (issuer string) {
-	if octx, ok := ctx.(Context); ok {
+	if octx := c.GetContext(ctx); octx != nil {
 		if iss, err := octx.IssuerURL(); err == nil {
 			return iss.String()
 		}
@@ -712,22 +714,19 @@ func (c *Config) GetFormPostResponseWriter(ctx context.Context) oauthelia2.FormP
 	return oauthelia2.DefaultFormPostResponseWriter
 }
 
-// GetTokenURLs returns the token URL.
-func (c *Config) GetTokenURLs(ctx context.Context) (tokenURLs []string) {
-	return []string{c.getEndpointURL(ctx, EndpointPathToken, c.TokenURL)}
-}
-
 func (c *Config) getEndpointURL(ctx context.Context, path, fallback string) (endpointURL string) {
-	if octx, ok := ctx.(Context); ok {
-		switch issuerURL, err := octx.IssuerURL(); err {
-		case nil:
-			return strings.ToLower(issuerURL.JoinPath(path).String())
-		default:
-			return fallback
-		}
+	var octx Context
+
+	if octx = c.GetContext(ctx); octx == nil {
+		return fallback
 	}
 
-	return fallback
+	switch issuerURL, err := octx.IssuerURL(); err {
+	case nil:
+		return strings.ToLower(issuerURL.JoinPath(path).String())
+	default:
+		return fallback
+	}
 }
 
 // GetUseLegacyErrorFormat returns whether to use the legacy error format.
@@ -813,8 +812,28 @@ func (c *Config) GetEnforceRevokeFlowRevokeRefreshTokensExplicitClient(ctx conte
 	return c.EnforceRevokeFlowRevokeRefreshTokensExplicitClient
 }
 
-func (c *Config) GetTokenURL(ctx context.Context) (url string) {
-	return c.getEndpointURL(ctx, EndpointPathToken, c.TokenURL)
+func (c *Config) GetAllowedJWTAssertionAudiences(ctx context.Context) (audiences []string) {
+	var octx Context
+
+	if octx = c.GetContext(ctx); octx == nil {
+		return nil
+	}
+
+	var (
+		issuer *url.URL
+		err    error
+	)
+
+	if issuer, err = octx.IssuerURL(); err != nil {
+		logging.Logger().WithError(err).Error("Error retrieving issuer")
+		return nil
+	}
+
+	return []string{
+		issuer.String(),
+		issuer.JoinPath(EndpointPathToken).String(),
+		issuer.JoinPath(EndpointPathPushedAuthorizationRequest).String(),
+	}
 }
 
 func (c *Config) GetRFC8628CodeLifespan(ctx context.Context) time.Duration {
@@ -855,4 +874,18 @@ func (c *Config) GetDefaultRFC8693RequestedTokenType(ctx context.Context) string
 
 func (c *Config) GetEnforceJWTProfileAccessTokens(ctx context.Context) (enforce bool) {
 	return c.EnforceJWTProfileAccessTokens
+}
+
+func (c *Config) GetContext(ctx context.Context) (octx Context) {
+	var ok bool
+
+	if octx, ok = ctx.Value(model.CtxKeyAutheliaCtx).(Context); ok {
+		return octx
+	}
+
+	if octx, ok = ctx.(Context); ok {
+		return octx
+	}
+
+	return nil
 }

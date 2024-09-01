@@ -668,3 +668,11 @@ func (ctx *AutheliaCtx) GetConfiguration() (config schema.Configuration) {
 func (ctx *AutheliaCtx) GetProviderUserAttributeResolver() expression.UserAttributeResolver {
 	return ctx.Providers.UserAttributeResolver
 }
+
+func (ctx *AutheliaCtx) Value(key any) any {
+	if key == model.CtxKeyAutheliaCtx {
+		return ctx
+	}
+
+	return ctx.RequestCtx.Value(key)
+}
